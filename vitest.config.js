@@ -10,7 +10,17 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      exclude: ["node_modules/", "src/setupTests.js", "**/*.test.{js,jsx}"],
+      exclude: [
+        "node_modules/",
+        "src/setupTests.js",
+        "**/*.test.{js,jsx}",
+        "dist/**",
+      ],
+      include: ["src/**/*.{js,jsx}"],
     },
+  },
+  build: {
+    outDir: "dist",
+    sourcemap: true,
   },
 });
