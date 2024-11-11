@@ -1,57 +1,81 @@
-// src/LoginPage.test.jsx
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { BrowserRouter, useNavigate } from "react-router-dom";
+import { BrowserRouter } from "react-router-dom";
 import LoginPage from "./LoginPage";
+import axiosInstance from "./axiosConfig";
 
-// Mock react-router-dom
-vi.mock("react-router-dom", () => ({
-  BrowserRouter: ({ children }) => <div>{children}</div>,
-  useNavigate: () => vi.fn(),
+// Mock the axios instance
+vi.mock("./axiosConfig", () => ({
+  default: {
+    post: vi.fn(),
+  },
 }));
+
+// Mock localStorage
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+};
+Object.defineProperty(window, "localStorage", { value: localStorageMock });
 
 describe("LoginPage Component", () => {
   beforeEach(() => {
-    // Clear localStorage mock
-    localStorage.clear();
+    vi.clearAllMocks();
   });
 
-  // Test 1: Component Renders
-  it("renders login form successfully", () => {
-    render(<LoginPage />);
-    expect(document.querySelector("form")).toBeInTheDocument();
-  });
+  it("renders login form", () => {
+    render(
+      <BrowserRouter>
+        <LoginPage />
+      </BrowserRouter>
+    );
 
-  // Test 2: Contains Required Fields
-  it("contains email and password fields", () => {
-    render(<LoginPage />);
     expect(screen.getByPlaceholderText("Email")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Password")).toBeInTheDocument();
-  });
-
-  // Test 3: Has Submit Button
-  it("has a submit button", () => {
-    render(<LoginPage />);
     expect(screen.getByText("Log In")).toBeInTheDocument();
   });
 
-  // Test 4: Handles Input Changes
-  it("updates input values on change", () => {
-    render(<LoginPage />);
+  it("handles input changes", () => {
+    render(
+      <BrowserRouter>
+        <LoginPage />
+      </BrowserRouter>
+    );
+
     const emailInput = screen.getByPlaceholderText("Email");
+    const passwordInput = screen.getByPlaceholderText("Password");
+
     fireEvent.change(emailInput, { target: { value: "test@example.com" } });
+    fireEvent.change(passwordInput, { target: { value: "password123" } });
+
     expect(emailInput.value).toBe("test@example.com");
+    expect(passwordInput.value).toBe("password123");
   });
 
-  // // Test 5: Form Submission
-  // it("handles form submission", async () => {
-  //   const mockNavigate = vi.fn();
-  //   vi.mocked(useNavigate).mockReturnValue(mockNavigate);
+  it("submits form successfully", async () => {
+    const mockResponse = { data: { token: "test-token", employeeId: "123" } };
+    axiosInstance.post.mockResolvedValueOnce(mockResponse);
 
-  //   render(<LoginPage />);
-  //   const form = screen.getByRole("form");
+    render(
+      <BrowserRouter>
+        <LoginPage />
+      </BrowserRouter>
+    );
 
-  //   fireEvent.submit(form);
-  //   expect(true).toBe(true);
-  // });
+    const emailInput = screen.getByPlaceholderText("Email");
+    const passwordInput = screen.getByPlaceholderText("Password");
+    const submitButton = screen.getByText("Log In");
+
+    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
+    fireEvent.change(passwordInput, { target: { value: "password123" } });
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(axiosInstance.post).toHaveBeenCalledWith("/auth/login", {
+        email: "test@example.com",
+        password: "password123",
+      });
+    });
+  });
 });
